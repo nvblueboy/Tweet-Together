@@ -6,6 +6,10 @@ const client = new Discord.Client({partials: ['MESSAGE', 'CHANNEL', 'REACTION']}
 //File storage (TODO: Make this work on a database instead of a JSON file)
 //I'm hedging my bets that this file won't get too complicated, hence the constant read+writes
 function wasMessageTweeted(guildId, messageId) {
+    if (!fs.existsSync(config.datafile)) {
+        return false;
+    }
+
     let rawdata = fs.readFileSync(config.datafile);
     let parsed = JSON.parse(rawdata);
 
@@ -23,8 +27,13 @@ function wasMessageTweeted(guildId, messageId) {
 }
 
 function storeMessageTweeted(guildId, messageId) {
-    let rawdata = fs.readFileSync(config.datafile);
-    let parsed = JSON.parse(rawdata);
+
+    var parsed = {"guilds":{}};
+
+    if (fs.existsSync(config.datafile)) {
+        let rawdata = fs.readFileSync(config.datafile);
+        parsed = JSON.parse(rawdata);
+    }
 
     if (!(guildId in parsed.guilds)) {
         parsed.guilds[guildId] = {"messages":[messageId]};
@@ -67,7 +76,9 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
             console.log("Tweeting: "+message.content);
 
-            message.channel.send("Hit reaction limit, tweeting: " + message.content);
+            var outboundMessage = (await message.channel.send("Hit reaction limit, tweeting: " + message.content));
+
+            console.log(outboundMessage);
 
             storeMessageTweeted(message.channel.guild.id, message.id);
         } else {
